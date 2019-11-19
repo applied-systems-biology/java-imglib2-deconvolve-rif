@@ -516,15 +516,6 @@ public class Filters {
     }
 
     public static Img<ComplexFloatType> fft(Img<FloatType> img, long[] fftDims) {
-//        Interval interval = Views.extendValue(img, new FloatType()).getSource();
-//        long[] paddedDimensions = new long[3];
-//        long[] fftDimensions = new long[3];
-//        FFTMethods.dimensionsRealToComplexFast(FinalDimensions.wrap(Filters.getDimensions(img)), paddedDimensions, fftDimensions);
-//        Interval imgConvolutionInterval = FFTMethods.paddingIntervalCentered(interval, FinalDimensions.wrap(fftDims));
-//        RandomAccessibleInterval< FloatType > kernelInput = Views.interval( Views.extendPeriodic( Views.interval( img, imgConvolutionInterval ) ), new FinalInterval( fftDims  ) );
-//        Img<ComplexFloatType> Y = FFT.realToComplex(kernelInput, new ArrayImgFactory<>(new ComplexFloatType()));
-//        return Y;
-
         // Get the interval where we pull the information for the FFT
         Interval fftInputInterval = FFTMethods.paddingIntervalCentered(img, FinalDimensions.wrap(fftDims));
 
