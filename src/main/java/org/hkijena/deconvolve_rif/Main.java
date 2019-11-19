@@ -78,8 +78,8 @@ public class Main {
             JsonObject obj = gson.fromJson(new String(Files.readAllBytes(inputFilePath.resolve("samples.json")), Charset.defaultCharset()), JsonObject.class);
             for(String key : obj.keySet()) {
                 float vsData = obj.getAsJsonObject(key).get("voxel-size-sample-xyz").getAsFloat();
-                float vsPSFXZ = obj.getAsJsonObject(key).getAsJsonObject("voxel-size-sample").getAsJsonPrimitive("xz").getAsFloat();
-                float vsPSFY = obj.getAsJsonObject(key).getAsJsonObject("voxel-size-sample").getAsJsonPrimitive("y").getAsFloat();
+                float vsPSFXZ = obj.getAsJsonObject(key).getAsJsonObject("voxel-size-psf").getAsJsonPrimitive("xz").getAsFloat();
+                float vsPSFY = obj.getAsJsonObject(key).getAsJsonObject("voxel-size-psf").getAsJsonPrimitive("y").getAsFloat();
                 dataVoxelSizes.put(key, new VoxelSize(vsData, vsData, vsData));
                 psfVoxelSizes.put(key, new VoxelSize(vsPSFXZ, vsPSFY, vsPSFXZ));
             }
@@ -103,17 +103,10 @@ public class Main {
         DefaultDexecutor<Integer, Integer> dexecutor = new DefaultDexecutor<>(dexecutorConfig);
 
         for(DataInterface dataInterface : dataInterfaces) {
-            List<Integer> lastLayer = new ArrayList<>();
-            List<Integer> thisLayer = new ArrayList<>();
-
-            // Create Task
-            {
-                int tid = dagTasks.size();
-                DAGTask task = new Deconvolve(tid, dataInterface);
-                dagTasks.put(tid, task);
-                thisLayer.add(tid);
-            }
-            flushDependencies(dexecutor, lastLayer, thisLayer);
+            int tid = dagTasks.size();
+            DAGTask task = new Deconvolve(tid, dataInterface);
+            dagTasks.put(tid, task);
+            dexecutor.addIndependent(tid);
         }
 
         dexecutor.execute(ExecutionConfig.TERMINATING);
@@ -127,16 +120,5 @@ public class Main {
         }
 
         System.exit(0);
-    }
-
-    private static void flushDependencies(DefaultDexecutor<Integer, Integer> dexecutor, List<Integer> lastLayer, List<Integer> thisLayer) {
-        for(Integer here : thisLayer) {
-            for(Integer there : lastLayer) {
-                dexecutor.addDependency(there, here);
-            }
-        }
-        lastLayer.clear();
-        lastLayer.addAll(thisLayer);
-        thisLayer.clear();
     }
 }

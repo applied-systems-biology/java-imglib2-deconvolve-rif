@@ -1,8 +1,9 @@
 package org.hkijena.deconvolve_rif;
 
-import net.imagej.ops.image.watershed.WatershedSeeded;
 import net.imglib2.RandomAccess;
 import net.imglib2.*;
+import net.imglib2.algorithm.fft2.FFT;
+import net.imglib2.algorithm.fft2.FFTMethods;
 import net.imglib2.algorithm.labeling.ConnectedComponents;
 import net.imglib2.algorithm.morphology.Dilation;
 import net.imglib2.algorithm.morphology.distance.DistanceTransform;
@@ -12,10 +13,7 @@ import net.imglib2.algorithm.neighborhood.RectangleShape;
 import net.imglib2.algorithm.neighborhood.Shape;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
-import net.imglib2.img.ImgView;
 import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.interpolation.InterpolatorFactory;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
@@ -28,12 +26,12 @@ import net.imglib2.type.Type;
 import net.imglib2.type.logic.NativeBoolType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.complex.ComplexFloatType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.integer.UnsignedIntType;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Util;
 import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.RandomAccessibleOnRealRandomAccessible;
 import net.imglib2.view.Views;
@@ -513,6 +511,28 @@ public class Filters {
                     target.get().set(0);
             }
         }
+
+        return result;
+    }
+
+    public static Img<ComplexFloatType> fft(Img<FloatType> img, long[] fftDims) {
+//        Interval interval = Views.extendValue(img, new FloatType()).getSource();
+//        long[] paddedDimensions = new long[3];
+//        long[] fftDimensions = new long[3];
+//        FFTMethods.dimensionsRealToComplexFast(FinalDimensions.wrap(Filters.getDimensions(img)), paddedDimensions, fftDimensions);
+//        Interval imgConvolutionInterval = FFTMethods.paddingIntervalCentered(interval, FinalDimensions.wrap(fftDims));
+//        RandomAccessibleInterval< FloatType > kernelInput = Views.interval( Views.extendPeriodic( Views.interval( img, imgConvolutionInterval ) ), new FinalInterval( fftDims  ) );
+//        Img<ComplexFloatType> Y = FFT.realToComplex(kernelInput, new ArrayImgFactory<>(new ComplexFloatType()));
+//        return Y;
+
+        // Get the interval where we pull the information for the FFT
+        Interval fftInputInterval = FFTMethods.paddingIntervalCentered(img, FinalDimensions.wrap(fftDims));
+
+        // Create a new randomaccessible from expanded input image & interval
+        RandomAccessibleInterval<FloatType> fftInput = Views.interval(Views.extendZero(img), fftInputInterval);
+
+        // Calculate FFT
+        Img<ComplexFloatType> result = FFT.realToComplex(fftInput, new ArrayImgFactory<>(new ComplexFloatType()));
 
         return result;
     }

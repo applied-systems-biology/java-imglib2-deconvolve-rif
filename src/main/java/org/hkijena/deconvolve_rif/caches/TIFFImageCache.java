@@ -22,6 +22,7 @@ public class TIFFImageCache<T extends RealType<T> & NativeType<T>> {
     private ImgFactory<T> factory;
     private long width;
     private long height;
+    private Img<T> cache;
 
     public TIFFImageCache(Path file, T imgDataType) {
         this.file = file;
@@ -49,12 +50,15 @@ public class TIFFImageCache<T extends RealType<T> & NativeType<T>> {
     }
 
     public Img<T> getOrCreate() {
+        if(cache != null)
+            return cache;
         if(Files.exists(file)) {
-            return Main.IMGOPENER.openImgs(file.toString(), imgDataType).get(0);
+            cache = Main.IMGOPENER.openImgs(file.toString(), imgDataType).get(0);
         }
         else {
-            return factory.create(getXSize(), getYSize());
+            cache = factory.create(getXSize(), getYSize());
         }
+        return cache;
     }
 
     public void set(Img<T> img) {
