@@ -71,27 +71,13 @@ public class Main {
 
         long startTime = System.currentTimeMillis();
 
-        Map<String, VoxelSize> dataVoxelSizes = new HashMap<>();
-        Map<String, VoxelSize> psfVoxelSizes = new HashMap<>();
-        {
-            Gson gson = (new GsonBuilder()).create();
-            JsonObject obj = gson.fromJson(new String(Files.readAllBytes(inputFilePath.resolve("samples.json")), Charset.defaultCharset()), JsonObject.class);
-            for(String key : obj.keySet()) {
-                float vsData = obj.getAsJsonObject(key).get("voxel-size-sample-xyz").getAsFloat();
-                float vsPSFXZ = obj.getAsJsonObject(key).getAsJsonObject("voxel-size-psf").getAsJsonPrimitive("xz").getAsFloat();
-                float vsPSFY = obj.getAsJsonObject(key).getAsJsonObject("voxel-size-psf").getAsJsonPrimitive("y").getAsFloat();
-                dataVoxelSizes.put(key, new VoxelSize(vsData, vsData, vsData));
-                psfVoxelSizes.put(key, new VoxelSize(vsPSFXZ, vsPSFY, vsPSFXZ));
-            }
-        }
-
         // Load data interfaces
         List<DataInterface> dataInterfaces = new ArrayList<>();
 
         for(Path samplePath : Files.list(inputFilePath).filter(path -> Files.isDirectory(path)).collect(Collectors.toList())) {
             System.out.println("Generating data interface for " + samplePath.toString());
             String key = samplePath.getFileName().toString();
-            DataInterface dataInterface = new DataInterface(samplePath, outputFilePath.resolve(samplePath.getFileName()), dataVoxelSizes.get(key), psfVoxelSizes.get(key));
+            DataInterface dataInterface = new DataInterface(samplePath, outputFilePath.resolve(samplePath.getFileName()));
             dataInterfaces.add(dataInterface);
         }
 
@@ -104,9 +90,14 @@ public class Main {
 
         for(DataInterface dataInterface : dataInterfaces) {
             int tid = dagTasks.size();
-            DAGTask task = new Deconvolve(tid, dataInterface);
+            DAGTask task = new Convolve(tid, dataInterface);
             dagTasks.put(tid, task);
             dexecutor.addIndependent(tid);
+
+            int nextTid = dagTasks.size();
+            task = new Deconvolve(nextTid, dataInterface);
+            dagTasks.put(nextTid, task);
+            dexecutor.addDependency(tid, nextTid);
         }
 
         dexecutor.execute(ExecutionConfig.TERMINATING);

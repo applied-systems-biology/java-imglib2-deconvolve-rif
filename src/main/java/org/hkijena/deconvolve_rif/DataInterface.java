@@ -10,19 +10,17 @@ import java.nio.file.Path;
 public class DataInterface {
 
     private Path outputDirectory;
-    private TIFFImageCache<UnsignedByteType> inputImage;
-    private TIFFImageCache<UnsignedShortType> psfImage;
-    private TIFFImageCache<FloatType> outputImage;
-    private VoxelSize inputVoxelSize;
-    private VoxelSize psfVoxelSize;
+    private TIFFImageCache<UnsignedShortType> inputImage;
+    private TIFFImageCache<FloatType> psfImage;
+    private TIFFImageCache<FloatType> convolvedImage;
+    private TIFFImageCache<FloatType> deconvolvedImage;
 
-    public DataInterface(Path inputDirectory, Path outputDirectory, VoxelSize inputVoxelSize, VoxelSize psfVoxelSize) {
+    public DataInterface(Path inputDirectory, Path outputDirectory) {
         this.outputDirectory = outputDirectory;
-        inputImage = new TIFFImageCache<>(inputDirectory.resolve("in").resolve("data.tif"), new UnsignedByteType());
-        psfImage = new TIFFImageCache<>(inputDirectory.resolve("psf").resolve("psf.tif"), new UnsignedShortType());
-        outputImage = new TIFFImageCache<>(outputDirectory.resolve("deconvolved.tif"), new FloatType(), getInputImage());
-        this.inputVoxelSize = inputVoxelSize;
-        this.psfVoxelSize = psfVoxelSize;
+        inputImage = new TIFFImageCache<>(inputDirectory.resolve("in").resolve("data.tif"), new UnsignedShortType());
+        psfImage = new TIFFImageCache<>(inputDirectory.resolve("psf").resolve("psf.tif"), new FloatType());
+        convolvedImage = new TIFFImageCache<>(outputDirectory.resolve("convolved.tif"), new FloatType(), getInputImage());
+        deconvolvedImage = new TIFFImageCache<>(outputDirectory.resolve("deconvolved.tif"), new FloatType(), getInputImage());
     }
 
     @Override
@@ -34,23 +32,19 @@ public class DataInterface {
         return outputDirectory;
     }
 
-    public TIFFImageCache<UnsignedByteType> getInputImage() {
+    public TIFFImageCache<UnsignedShortType> getInputImage() {
         return inputImage;
     }
 
-    public TIFFImageCache<UnsignedShortType> getPsfImage() {
+    public TIFFImageCache<FloatType> getPsfImage() {
         return psfImage;
     }
 
-    public TIFFImageCache<FloatType> getOutputImage() {
-        return outputImage;
+    public TIFFImageCache<FloatType> getDeconvolvedImage() {
+        return deconvolvedImage;
     }
 
-    public VoxelSize getInputVoxelSize() {
-        return inputVoxelSize;
-    }
-
-    public VoxelSize getPsfVoxelSize() {
-        return psfVoxelSize;
+    public TIFFImageCache<FloatType> getConvolvedImage() {
+        return convolvedImage;
     }
 }
