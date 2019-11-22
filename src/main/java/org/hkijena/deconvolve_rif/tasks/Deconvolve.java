@@ -3,6 +3,7 @@ package org.hkijena.deconvolve_rif.tasks;
 import net.imagej.ImageJ;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.fft2.FFT;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -31,16 +32,11 @@ public class Deconvolve extends DAGTask {
         {
             Filters.setTo(kernel, new FloatType(1.0f / 8));
             RandomAccess<FloatType> access = kernel.randomAccess();
-            access.setPosition(new long[]{ 1, 1, 1 });
+            access.setPosition(new long[]{ 1, 1 });
             access.get().set(-1);
         }
 
         return Filters.fft(kernel, fftDims, true);
-    }
-
-    private Img<FloatType> getPSF(Img<FloatType> img) {
-        Img<FloatType> psf = ImageJFunctions.convertFloat(ImageJFunctions.wrap(getDataInterface().getPsfImage().getOrCreate(), "psf"));
-        return psf;
     }
 
     private long[] getFFTDimensions(Img<FloatType> img, Img<FloatType> psf) {
@@ -56,8 +52,8 @@ public class Deconvolve extends DAGTask {
         final ImageJ ij = Main.IMAGEJ;
         System.out.println("Running Deconvolve on " + getDataInterface().toString());
 
-        Img<FloatType> img = ImageJFunctions.convertFloat(ImageJFunctions.wrap(getDataInterface().getInputImage().getOrCreate(), "img"));
-        Img<FloatType> psf = getPSF(img);
+        Img<FloatType> img = getDataInterface().getConvolvedImage().getOrCreate();
+        Img<FloatType> psf = getDataInterface().getPsfImage().getOrCreate();
 
         // Transform into Fourier space
         long[] fftDims = getFFTDimensions(img, psf);
@@ -70,7 +66,7 @@ public class Deconvolve extends DAGTask {
         Img<ComplexFloatType> Y = imgFFT;
         Img<ComplexFloatType> H = psfFFT;
         Img<ComplexFloatType> L = getLaplacianFFT(fftDims);
-        Img<ComplexFloatType> X = Y.factory().create(Filters.getDimensions(Y));
+        Img<ComplexFloatType> X = imgFFT.factory().create(Filters.getDimensions(Y));
 
         // Apply calculations
         {
@@ -114,12 +110,9 @@ public class Deconvolve extends DAGTask {
         }
 
         // Inverse FFT
-        Img<FloatType> deconvolved = img.factory().create(Filters.getPaddedDimensions(img, fftDims));
-        FFT.complexToReal(X, deconvolved);
-//        FFT.complexToRealUnpad(X, deconvolved);
-//
-//        Filters.normalizeByMax(deconvolved);
-//
+        Img<FloatType> deconvolved = img.factory().create(Filters.getDimensions(img));
+        ij.op().filter().ifft(deconvolved, X);
+        deconvolved = Filters.unshift(deconvolved);
         getDataInterface().getDeconvolvedImage().set(deconvolved);
     }
 

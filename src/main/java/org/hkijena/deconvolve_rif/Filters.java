@@ -1,5 +1,6 @@
 package org.hkijena.deconvolve_rif;
 
+import net.imagej.ImageJ;
 import net.imglib2.RandomAccess;
 import net.imglib2.*;
 import net.imglib2.algorithm.fft2.FFT;
@@ -13,8 +14,10 @@ import net.imglib2.algorithm.neighborhood.RectangleShape;
 import net.imglib2.algorithm.neighborhood.Shape;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
+import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.interpolation.InterpolatorFactory;
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.RealViews;
@@ -183,6 +186,10 @@ public class Filters {
         }
     }
 
+    public static <T extends Type<T>> void copyInterval(final RandomAccessibleInterval<T> source, final RandomAccessibleInterval<T> target) {
+        LoopBuilder.setImages(source, target).forEachPixel(Type::set);
+    }
+
     public static <T extends RealType<T>> List<T> getSortedPixels(Img<T> src) {
         List<T> pixels = new ArrayList<>((int)src.size());
 
@@ -235,7 +242,7 @@ public class Filters {
         return result;
     }
 
-    public static <T> long[] getDimensions(Img<T> src) {
+    public static <T> long[] getDimensions(RandomAccessibleInterval<T> src) {
         long[] result = new long[src.numDimensions()];
         src.dimensions(result);
         return result;
@@ -533,14 +540,34 @@ public class Filters {
             max[i] = img.dimension(i) + c[i] - 1 + ap[i];
         }
 
-        if(shift) {
-            for(int i = 0; i < img.numDimensions(); ++i) {
-                min[i] -= img.dimension(i) / 2 - 1;
-                max[i] -= img.dimension(i) / 2 - 1;
-            }
-        }
+        IntervalView<T> result = Views.interval(Views.extendZero(img), min, max);
 
-        return Views.interval(Views.extendZero(img), min, max);
+        if(shift) {
+            long[] smin = new long[img.numDimensions()];
+            long[] smax = new long[img.numDimensions()];
+            for(int i = 0; i < img.numDimensions(); ++i) {
+                smin[i] = -(result.dimension(i) / 2 - 1);
+                smax[i] = result.dimension(i) + smin[i] - 1;
+            }
+            IntervalView<T> sresult = Views.interval(Views.extendPeriodic(result), smin, smax);
+            return sresult;
+        }
+        else {
+            return result;
+        }
+    }
+
+    public static Img<FloatType> unshift(Img<FloatType> img) {
+        long[] min = new long[img.numDimensions()];
+        long[] max = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            min[i] = -(img.dimension(i) / 2 - 1);
+            max[i] = min[i] + img.dimension(i);
+        }
+        IntervalView<FloatType> interval = Views.interval(Views.extendPeriodic(img), min, max);
+        Img<FloatType> target = (new ArrayImgFactory<>(new FloatType())).create(getDimensions(interval));
+        copyInterval(interval, target);
+        return target;
     }
 
     public static long[] getPaddedDimensions(Img<?> img, long[] fftDims) {
@@ -561,12 +588,11 @@ public class Filters {
     }
 
     public static Img<ComplexFloatType> fft(Img<FloatType> img, long[] fftDims, boolean shift) {
-
-        // Pad the image
-        IntervalView<FloatType> imgPadded = fftpad(img, fftDims, shift);
-
-        // Calculate FFT
-        Img<ComplexFloatType> result = FFT.realToComplex(imgPadded, new ArrayImgFactory<>(new ComplexFloatType()));
+        final ImageJ ij = Main.IMAGEJ;
+        RandomAccessibleInterval<FloatType> input = fftpad(img, fftDims, shift);
+        RandomAccessibleInterval<ComplexFloatType> result_ = ij.op().filter().fft(input);
+        Img<ComplexFloatType> result = (new ArrayImgFactory<>(new ComplexFloatType())).create(getDimensions(result_));
+        copy(result_, result);
         return result;
     }
 }
