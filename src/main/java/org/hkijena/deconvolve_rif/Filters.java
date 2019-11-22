@@ -33,6 +33,7 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 import net.imglib2.view.ExtendedRandomAccessibleInterval;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.RandomAccessibleOnRealRandomAccessible;
 import net.imglib2.view.Views;
 
@@ -515,16 +516,57 @@ public class Filters {
         return result;
     }
 
-    public static Img<ComplexFloatType> fft(Img<FloatType> img, long[] fftDims) {
-        // Get the interval where we pull the information for the FFT
-        Interval fftInputInterval = FFTMethods.paddingIntervalCentered(img, FinalDimensions.wrap(fftDims));
+    public static <T extends RealType<T>> IntervalView<T> fftpad(Img<T> img, long[] fftDims, boolean shift) {
+        long[] ap = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            if(img.dimension(i) % 2 == 0)
+                ap[i] = 1;
+        }
+        long[] c = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            c[i] = (fftDims[i] - img.dimension(i) - ap[i]) / 2;
+        }
+        long[] min = new long[img.numDimensions()];
+        long[] max = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            min[i] = -c[i];
+            max[i] = img.dimension(i) + c[i] - 1 + ap[i];
+        }
 
-        // Create a new randomaccessible from expanded input image & interval
-        RandomAccessibleInterval<FloatType> fftInput = Views.interval(Views.extendZero(img), fftInputInterval);
+        if(shift) {
+            for(int i = 0; i < img.numDimensions(); ++i) {
+                min[i] -= img.dimension(i) / 2 - 1;
+                max[i] -= img.dimension(i) / 2 - 1;
+            }
+        }
+
+        return Views.interval(Views.extendZero(img), min, max);
+    }
+
+    public static long[] getPaddedDimensions(Img<?> img, long[] fftDims) {
+        long[] ap = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            if(img.dimension(i) % 2 == 0)
+                ap[i] = 1;
+        }
+        long[] c = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            c[i] = (fftDims[i] - img.dimension(i) - ap[i]) / 2;
+        }
+        long[] o = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            o[i] = 2 * c[i] + img.dimension(i) + ap[i] - 1;
+        }
+        return o;
+    }
+
+    public static Img<ComplexFloatType> fft(Img<FloatType> img, long[] fftDims, boolean shift) {
+
+        // Pad the image
+        IntervalView<FloatType> imgPadded = fftpad(img, fftDims, shift);
 
         // Calculate FFT
-        Img<ComplexFloatType> result = FFT.realToComplex(fftInput, new ArrayImgFactory<>(new ComplexFloatType()));
-
+        Img<ComplexFloatType> result = FFT.realToComplex(imgPadded, new ArrayImgFactory<>(new ComplexFloatType()));
         return result;
     }
 }
