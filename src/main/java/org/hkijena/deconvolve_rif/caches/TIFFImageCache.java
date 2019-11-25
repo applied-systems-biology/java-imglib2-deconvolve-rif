@@ -72,4 +72,8 @@ public class TIFFImageCache<T extends RealType<T> & NativeType<T>> {
     public long getYSize() {
         return height;
     }
+
+    public Path getFile() {
+        return file;
+    }
 }

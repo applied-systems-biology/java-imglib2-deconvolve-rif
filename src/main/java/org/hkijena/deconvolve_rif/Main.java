@@ -6,6 +6,8 @@ import com.github.dexecutor.core.ExecutionConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import deconvolutionlab.Lab;
+import deconvolutionlab.Platform;
 import net.imagej.ImageJ;
 import io.scif.img.ImgOpener;
 import io.scif.img.ImgSaver;
@@ -32,6 +34,9 @@ public class Main {
     public static ImageJ IMAGEJ = new ImageJ();
 
     public static void main(String[] args) throws Exception {
+
+        Lab.init(Platform.STANDALONE);
+
         Options options = new Options();
 
         Option input = new Option("i", "input", true, "input file path");
@@ -45,6 +50,10 @@ public class Main {
         Option threads = new Option("t", "threads", true, "number of threads");
         threads.setRequired(false);
         options.addOption(threads);
+
+        Option algorithm = new Option("a", "algorithm", true, "imglib2 or deconvlab2");
+        algorithm.setRequired(true);
+        options.addOption(algorithm);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -67,6 +76,8 @@ public class Main {
             numThreads = Integer.parseInt(cmd.getOptionValue("threads"));
         }
 
+        String selectedAlgorithm = cmd.getOptionValue("algorithm");
+
         System.out.println("Running with " + numThreads + " threads");
 
         long startTime = System.currentTimeMillis();
@@ -76,7 +87,6 @@ public class Main {
 
         for(Path samplePath : Files.list(inputFilePath).filter(path -> Files.isDirectory(path)).collect(Collectors.toList())) {
             System.out.println("Generating data interface for " + samplePath.toString());
-            String key = samplePath.getFileName().toString();
             DataInterface dataInterface = new DataInterface(samplePath, outputFilePath.resolve(samplePath.getFileName()));
             dataInterfaces.add(dataInterface);
         }
@@ -95,7 +105,10 @@ public class Main {
             dexecutor.addIndependent(tid);
 
             int nextTid = dagTasks.size();
-            task = new Deconvolve(nextTid, dataInterface);
+            if("deconvlab2".equals(selectedAlgorithm))
+                task = new DeconvolveWithDeconvolutionLab(nextTid, dataInterface);
+            else
+                task = new Deconvolve(nextTid, dataInterface);
             dagTasks.put(nextTid, task);
             dexecutor.addDependency(tid, nextTid);
         }

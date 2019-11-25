@@ -164,5 +164,10 @@
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.25" level="project" />
     <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.8.6" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-jdk14:1.7.29" level="project" />
+    <orderEntry type="library" name="Maven: com.github.wendykierp:JTransforms:3.1" level="project" />
+    <orderEntry type="library" name="Maven: pl.edu.icm:JLargeArrays:1.5" level="project" />
+    <orderEntry type="library" name="Maven: org.bytedeco:fftw:3.3.8-1.5-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: org.bytedeco:javacpp:1.5-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: ch.epfl.big:DeconvolutionLab_2:2.1.1" level="project" />
   </component>
 </module>
