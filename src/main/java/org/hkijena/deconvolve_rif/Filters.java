@@ -186,6 +186,36 @@ public class Filters {
         }
     }
 
+    public static < T extends Type< T >> void copy2(final IntervalView< T > source,
+                                                   final IterableInterval< T > target )
+    {
+        // create a cursor that automatically localizes itself on every move
+        Cursor< T > targetCursor = target.localizingCursor();
+        RandomAccess< T > sourceRandomAccess = source.randomAccess();
+
+        long[] diff = new long[source.numDimensions()];
+        for(int i = 0; i < target.numDimensions(); ++i) {
+            diff[i] = target.min(i) - source.min(i);
+        }
+
+        long[] loc = new long[source.numDimensions()];
+
+        // iterate over the input cursor
+        while (targetCursor.hasNext())
+        {
+            targetCursor.fwd();
+            targetCursor.localize(loc);
+
+            for(int i = 0; i < source.numDimensions(); ++i) {
+                loc[i] -= diff[i];
+            }
+            sourceRandomAccess.setPosition(loc);
+
+            // set the value of this pixel of the output image, every Type supports T.set( T type )
+            targetCursor.get().set( sourceRandomAccess.get() );
+        }
+    }
+
     public static <T extends Type<T>> void copyInterval(final RandomAccessibleInterval<T> source, final RandomAccessibleInterval<T> target) {
         LoopBuilder.setImages(source, target).forEachPixel(Type::set);
     }
@@ -557,18 +587,6 @@ public class Filters {
         }
     }
 
-    public static Img<FloatType> unshift(Img<FloatType> img) {
-        long[] min = new long[img.numDimensions()];
-        long[] max = new long[img.numDimensions()];
-        for(int i = 0; i < img.numDimensions(); ++i) {
-            min[i] = -(img.dimension(i) / 2 - 1);
-            max[i] = min[i] + img.dimension(i);
-        }
-        IntervalView<FloatType> interval = Views.interval(Views.extendPeriodic(img), min, max);
-        Img<FloatType> target = (new ArrayImgFactory<>(new FloatType())).create(getDimensions(interval));
-        copyInterval(interval, target);
-        return target;
-    }
 
     public static long[] getPaddedDimensions(Img<?> img, long[] fftDims) {
         long[] ap = new long[img.numDimensions()];
@@ -594,5 +612,40 @@ public class Filters {
         Img<ComplexFloatType> result = (new ArrayImgFactory<>(new ComplexFloatType())).create(getDimensions(result_));
         copy(result_, result);
         return result;
+    }
+
+    public static Img<FloatType> unshift(Img<FloatType> img) {
+        long[] min = new long[img.numDimensions()];
+        long[] max = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            min[i] = +(img.dimension(i) / 2 - 1);
+            max[i] = min[i] + img.dimension(i);
+        }
+        IntervalView<FloatType> interval = Views.interval(Views.extendPeriodic(img), min, max);
+        Img<FloatType> target = (new ArrayImgFactory<>(new FloatType())).create(getDimensions(interval));
+        copy2(interval, target);
+        return target;
+    }
+
+    public static Img<FloatType> cropCentered(Img<FloatType> img, long[] targetSize) {
+        long[] min = new long[img.numDimensions()];
+        long[] max = new long[img.numDimensions()];
+        for(int i = 0; i < img.numDimensions(); ++i) {
+            min[i] = img.dimension(i) / 2 - targetSize[i] / 2;
+            max[i] = min[i] + img.dimension(i);
+        }
+
+        Img<FloatType> result = (new ArrayImgFactory<>(new FloatType())).create(targetSize);
+        IntervalView<FloatType> interval = Views.interval(img, min, max);
+        copy2(interval, result);
+        return result;
+    }
+
+    public static void clamp(Img<FloatType> img) {
+        Cursor<FloatType> cursor = img.cursor();
+        while(cursor.hasNext()) {
+            cursor.fwd();
+            cursor.get().set(Math.max(0, Math.min(1, cursor.get().get())));
+        }
     }
 }

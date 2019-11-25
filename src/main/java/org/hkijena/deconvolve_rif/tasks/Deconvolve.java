@@ -110,9 +110,12 @@ public class Deconvolve extends DAGTask {
         }
 
         // Inverse FFT
-        Img<FloatType> deconvolved = img.factory().create(Filters.getDimensions(img));
+        long[] ifftDims = Filters.getPaddedDimensions(img, fftDims);
+        Img<FloatType> deconvolved = img.factory().create(ifftDims); //Filters.fftpad(img, fftDims, false)
         ij.op().filter().ifft(deconvolved, X);
+//        Filters.clamp(deconvolved);
         deconvolved = Filters.unshift(deconvolved);
+        deconvolved = Filters.cropCentered(deconvolved, Filters.getDimensions(img));
         getDataInterface().getDeconvolvedImage().set(deconvolved);
     }
 
