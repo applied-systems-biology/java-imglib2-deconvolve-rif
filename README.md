@@ -12,10 +12,7 @@ https://applied-systems-biology.github.io/misa-framework/
 
 # About
 
-The MISA++ Kidney Glomeruli Segmentation segments glomeruli in whole kidneys.
-It implements the algorithm published by Klingberg *et. al.*:
-
-> Klingberg, Anika, et al. "Fully automated evaluation of total glomerular number and capillary tuft size in nephritic kidneys using lightsheet microscopy." Journal of the American Society of Nephrology 28.2 (2017): 452-459.
+This program simulates deconvolution. It first convolves the input image with a predefined PSF, then deconvolves the resulting image using the regularized inverse filter method.
 
 # Copyright
 
