@@ -52,6 +52,7 @@ The program has following parameters:
 * `--input` the input directory
 * `--output` the output directory
 * `--threads <number>` number of threads
+* `--algorithm deconvlab2` sets the algorithm to DeconvolutionLab2. **Do not use imglib2 as algorithm, as its not functional**
 
 The input directory must have following structure:
 
