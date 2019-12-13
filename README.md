@@ -14,6 +14,8 @@ https://applied-systems-biology.github.io/misa-framework/
 
 This program simulates deconvolution. It first convolves the input image with a predefined PSF, then deconvolves the resulting image using the regularized inverse filter method.
 
+Example data: https://github.com/applied-systems-biology/misa-framework/releases/download/1.0.0/misaxx_deconvolve_example_data.zip
+
 # Copyright
 
 Copyright by Ruman Gerst
